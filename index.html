@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Position Rotator</title>
-    <!-- Favicon (browser tab icon) -->
+    <!-- Favicon (browser tab + mobile icon) -->
     <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
 </head>
@@ -15,9 +16,12 @@
             <h2>Shaanti Mandir Satsang Presents</h2>
         </div>
         <h1>Position Rotator</h1>
-        <p>Paste the list of names from WhatsApp/other sourse below</p>
+        <p>Paste the list of names from WhatsApp/other source below</p>
         <textarea id="nameInput" placeholder="Paste names here..."></textarea>
-        <button id="assignBtn">Assign Positions</button>
+        <div class="button-group">
+            <button id="assignBtn">Assign Positions</button>
+            <button id="leaderboardBtn">🏆 Leaderboard</button>
+        </div>
         <button id="resetBtn" class="reset-btn">🔄 Reset All Data</button>
         <div id="output"></div>
     </div>
