@@ -26,11 +26,6 @@ body {
     box-shadow: 0 5px 20px rgba(212, 175, 55, 0.5);
 }
 
-.logo {
-    font-size: 40px;
-    margin-bottom: 5px;
-}
-
 .header h2 {
     margin: 0;
     color: #1a1a2e;
@@ -51,6 +46,7 @@ p {
     text-align: center;
     color: #a0a0a0;
     margin: 0 0 20px 0;
+    font-size: 14px;
 }
 
 /* Input Area */
@@ -78,11 +74,18 @@ textarea::placeholder {
     color: #666;
 }
 
-/* Button */
+/* Button Group */
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+/* Main Button */
 button {
-    width: 100%;
+    flex: 1;
     padding: 16px;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%);
     color: #1a1a2e;
@@ -105,14 +108,24 @@ button:active {
     transform: translateY(0);
 }
 
+/* Leaderboard Button */
+#leaderboardBtn {
+    background: linear-gradient(135deg, #4a90d9 0%, #2d5a87 100%);
+    color: white;
+}
+
+#leaderboardBtn:hover {
+    background: linear-gradient(135deg, #6ba3e0 0%, #4a90d9 100%);
+}
+
 /* Reset Button */
 .reset-btn {
     background: transparent;
     border: 2px solid #ff6b6b;
     color: #ff6b6b;
-    margin-top: 10px;
     font-size: 14px;
-    padding: 10px;
+    padding: 12px;
+    width: 100%;
 }
 
 .reset-btn:hover {
@@ -145,26 +158,11 @@ button:active {
     }
     
     .header h2 {
-        font-size: 24px;
+        font-size: 22px;
     }
     
     h1 {
-        font-size: 36px;
-    }
-    
-    textarea {
-        height: 180px;
-        font-size: 18px;
-    }
-    
-    button {
-        font-size: 20px;
-        padding: 18px;
-    }
-    
-    #output {
-        font-size: 18px;
-        padding: 30px;
+        font-size: 32px;
     }
 }
 
@@ -179,7 +177,7 @@ button:active {
     }
     
     .header h2 {
-        font-size: 16px;
+        font-size: 14px;
     }
     
     h1 {
@@ -192,12 +190,11 @@ button:active {
     }
     
     button {
-        font-size: 16px;
-        padding: 14px;
+        font-size: 14px;
+        padding: 12px;
     }
     
-    #output {
-        font-size: 14px;
-        padding: 15px;
+    .button-group {
+        flex-direction: column;
     }
 }
