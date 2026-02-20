@@ -111,18 +111,18 @@ function assignPositions(names) {
 // ===== DISPLAY RESULTS =====
 function displayResults(positions, counts) {
     const outputDiv = document.getElementById('output');
-    let output = '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    let output = '━━━━━━━━━━━━━\n';
     output += '       ASSIGNED POSITIONS\n';
-    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    output += '━━━━━━━━━━━━━\n\n';
     
     for (const [pos, name] of Object.entries(positions)) {
         const suffix = pos == 1 ? 'st' : pos == 2 ? 'nd' : pos == 3 ? 'rd' : 'th';
         output += `  ${pos}${suffix}  ➤  ${name}\n`;
     }
     
-    output += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    output += '\n━━━━━━━━━━━━━\n';
     output += '         STATISTICS\n';
-    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    output += '━━━━━━━━━━━━━\n\n';
     
     for (const [name, data] of Object.entries(counts)) {
         output += `${name}\n`;
@@ -147,10 +147,10 @@ function viewLeaderboard() {
     // Sort by first positions (descending)
     const sorted = Object.entries(counts).sort((a, b) => b[1].first - a[1].first);
     
-    let output = '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    let output = '━━━━━━━━━━━━━━\n';
     output += '    🏆 LEADERBOARD 🏆\n';
     output += '    (Based on 1st Positions)\n';
-    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    output += '━━━━━━━━━━━━━━\n\n';
     
     sorted.forEach(([name, data], index) => {
         const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
@@ -158,9 +158,9 @@ function viewLeaderboard() {
         output += `      1st: ${data.first} | 2nd: ${data.second}\n\n`;
     });
     
-    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    output += '━━━━━━━━━━━━━━\n';
     output += '   TOP WINNER FOR PRIZE:\n';
-    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    output += '━━━━━━━━━━━━━━\n\n';
     output += `   🎉 ${sorted[0][0]} 🎉\n`;
     output += `   With ${sorted[0][1].first} first positions!\n`;
     
@@ -200,3 +200,4 @@ document.getElementById('resetBtn').addEventListener('click', () => {
         alert('Data has been reset!');
     }
 });
+
