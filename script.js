@@ -16,6 +16,27 @@ const SUFFIXES = [
     'भाई', 'बहन',
 ];
 
+// ===== POINTS SYSTEM =====
+const POINTS_SYSTEM = {
+    1: 12,
+    2: 10,
+    3: 9,
+    4: 8,
+    5: 7,
+    6: 6,
+    7: 5,
+    8: 4,
+    9: 3,
+    10: 2,
+};
+
+function getPoints(position) {
+    if (POINTS_SYSTEM[position]) {
+        return POINTS_SYSTEM[position];
+    }
+    return 1;
+}
+
 // ===== LOAD COUNTS =====
 function loadCounts() {
     const data = localStorage.getItem('positionCounts');
@@ -45,7 +66,7 @@ function cleanName(name) {
     return cleaned.trim();
 }
 
-// ===== PARSE NAMES =====
+// ===== PARSE NAMES (Preserve Exact Order) =====
 function parseNames(inputText) {
     const lines = inputText.split('\n');
     const names = [];
@@ -57,69 +78,87 @@ function parseNames(inputText) {
         
         if (cleaned && !seen.has(cleaned)) {
             seen.add(cleaned);
-            names.push(cleaned);
+            names.push(cleaned); // Push in exact order
         }
     }
     return names;
 }
 
-// ===== ASSIGN POSITIONS =====
+// ===== ASSIGN POSITIONS (Exact Input Order) =====
 function assignPositions(names) {
     const counts = loadCounts();
     
+    // Initialize missing names
     names.forEach(name => {
         if (!counts[name]) {
-            counts[name] = { first: 0, second: 0 };
+            counts[name] = { first: 0, second: 0, points: 0 };
         }
     });
     
-    const sortedNames = names.sort((a, b) => {
-        const totalA = counts[a].first + counts[a].second;
-        const totalB = counts[b].first + counts[b].second;
-        if (totalA === totalB) {
-            return a.localeCompare(b);
-        }
-        return totalA - totalB;
-    });
+    // Create array to store positions in exact input order
+    const orderedNames = [...names];
     
-    const positions = {};
-    sortedNames.forEach((name, index) => {
-        positions[index + 1] = name;
+    // Update points and counts
+    orderedNames.forEach((name, index) => {
+        const position = index + 1;
+        
+        // Update points
+        const points = getPoints(position);
+        counts[name].points = (counts[name].points || 0) + points;
+        
+        // Update 1st and 2nd counts
+        if (position === 1) counts[name].first++;
+        if (position === 2) counts[name].second++;
     });
-    
-    if (sortedNames.length >= 1) counts[sortedNames[0]].first++;
-    if (sortedNames.length >= 2) counts[sortedNames[1]].second++;
     
     saveCounts(counts);
-    return positions;
+    
+    // Return as array (not object) to preserve order
+    return orderedNames;
 }
 
 // ===== DISPLAY RESULTS =====
-function displayResults(positions, counts) {
+function displayResults(orderedNames, counts) {
     const outputDiv = document.getElementById('output');
     let output = '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    output += '       ASSIGNED POSITIONS\n';
+    output += '       SUNDAY RESULTS\n';
     output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
     
-    for (const [pos, name] of Object.entries(positions)) {
-        const suffix = pos == 1 ? 'st' : pos == 2 ? 'nd' : pos == 3 ? 'rd' : 'th';
-        output += `  ${pos}${suffix}  ➤  ${name}\n`;
-    }
+    // Display in exact input order
+    orderedNames.forEach((name, index) => {
+        const position = index + 1;
+        const suffix = position == 1 ? 'st' : position == 2 ? 'nd' : position == 3 ? 'rd' : 'th';
+        const points = getPoints(position);
+        output += `  ${position}${suffix}  ➤  ${name} (+${points} pts)\n`;
+    });
     
     output += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    output += '         STATISTICS\n';
+    output += '    OVERALL STANDINGS\n';
     output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
     
-    for (const [name, data] of Object.entries(counts)) {
-        output += `${name}\n`;
+    // Sort by points (desc), then by firsts, then seconds
+    const sorted = Object.entries(counts).sort((a, b) => {
+        const pointsB = b[1].points || 0;
+        const pointsA = a[1].points || 0;
+        if (pointsB !== pointsA) return pointsB - pointsA;
+        
+        const firstB = b[1].first;
+        const firstA = a[1].first;
+        if (firstB !== firstA) return firstB - firstA;
+        
+        return (b[1].second || 0) - (a[1].second || 0);
+    });
+    
+    sorted.forEach(([name, data]) => {
+        output += `${name}: ${data.points || 0} pts\n`;
         output += `   🥇 1st: ${data.first} | 🥈 2nd: ${data.second}\n\n`;
-    }
+    });
     
     outputDiv.textContent = output;
     outputDiv.classList.add('show');
 }
 
-// ===== LEADERBOARD (Sorted by 1st, then 2nd) =====
+// ===== LEADERBOARD (Based on Points) =====
 function viewLeaderboard() {
     const counts = loadCounts();
     const outputDiv = document.getElementById('output');
@@ -130,28 +169,45 @@ function viewLeaderboard() {
         return;
     }
     
-    // Sort by: 1st positions (desc), then 2nd positions (desc)
+    // Sort by: Points (desc), then 1st positions (desc), then 2nd positions (desc)
     const sorted = Object.entries(counts).sort((a, b) => {
-        const firstA = a[1].first;
-        const firstB = b[1].first;
-        const secondA = a[1].second;
-        const secondB = b[1].second;
+        const pointsB = b[1].points || 0;
+        const pointsA = a[1].points || 0;
+        if (pointsB !== pointsA) return pointsB - pointsA;
         
+        const firstB = b[1].first;
+        const firstA = a[1].first;
         if (firstB !== firstA) return firstB - firstA;
-        if (secondB !== secondA) return secondB - secondA;
-        return a[0].localeCompare(b[0]);
+        
+        return (b[1].second || 0) - (a[1].second || 0);
     });
     
     let output = '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    output += '    🏆 LEADERBOARD 🏆\n';
+    output += '    🏆 FINAL LEADERBOARD 🏆\n';
+    output += '    (Based on Total Points)\n';
     output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
     
     sorted.forEach(([name, data], index) => {
         const rank = index + 1;
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `  ${rank}.`;
         output += `${medal} ${name}\n`;
-        output += `      1st: ${data.first} | 2nd: ${data.second}\n\n`;
+        output += `      ⭐ ${data.points || 0} pts\n`;
+        output += `      🥇 1st: ${data.first} | 🥈 2nd: ${data.second}\n\n`;
     });
+    
+    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    output += '    🏅 PRIZE WINNERS 🏅\n';
+    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    
+    if (sorted.length >= 1) {
+        output += `🥇 1st Prize: ${sorted[0][0]}\n`;
+    }
+    if (sorted.length >= 2) {
+        output += `🥈 2nd Prize: ${sorted[1][0]}\n`;
+    }
+    if (sorted.length >= 3) {
+        output += `🥉 3rd Prize: ${sorted[2][0]}\n`;
+    }
     
     outputDiv.textContent = output;
     outputDiv.classList.add('show');
@@ -167,9 +223,9 @@ document.getElementById('assignBtn').addEventListener('click', () => {
         return;
     }
     
-    const positions = assignPositions(names);
+    const orderedNames = assignPositions(names);
     const counts = loadCounts();
-    displayResults(positions, counts);
+    displayResults(orderedNames, counts);
     document.getElementById('nameInput').value = '';
 });
 
