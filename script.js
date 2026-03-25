@@ -48,6 +48,169 @@ function saveCounts(counts) {
     localStorage.setItem('positionCounts', JSON.stringify(counts));
 }
 
+// ===== LOAD WEEKLY RECORDS =====
+function loadWeeklyRecords() {
+    const data = localStorage.getItem('weeklyRecords');
+    return data ? JSON.parse(data) : [];
+}
+
+// ===== SAVE WEEKLY RECORDS =====
+function saveWeeklyRecords(records) {
+    localStorage.setItem('weeklyRecords', JSON.stringify(records));
+}
+
+// ===== GET MONDAY OF CURRENT WEEK =====
+function getMondayOfWeek(date = new Date()) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.getFullYear(), d.getMonth(), diff);
+    return monday;
+}
+
+// ===== FORMAT DATE AS YYYY-MM-DD =====
+function formatDate(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${year}-${month}-${day}`;
+}
+
+// ===== GET DAY NAME =====
+function getDayName(date) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[new Date(date).getDay()];
+}
+
+// ===== GET CURRENT WEEK RECORD =====
+function getCurrentWeekRecord() {
+    const records = loadWeeklyRecords();
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    // If it's Sunday (0), there should be no active week
+    if (dayOfWeek === 0) {
+        return null;
+    }
+    
+    const mondayDate = getMondayOfWeek(today);
+    const mondayStr = formatDate(mondayDate);
+    
+    let currentWeekIndex = records.findIndex(r => r.weekStartDate === mondayStr);
+    let currentWeek;
+    
+    if (currentWeekIndex === -1) {
+        // Create new week
+        const saturdayDate = new Date(mondayDate);
+        saturdayDate.setDate(saturdayDate.getDate() + 5); // Monday + 5 days = Saturday
+        
+        currentWeek = {
+            weekStartDate: mondayStr,
+            weekEndDate: formatDate(saturdayDate),
+            participants: {},
+            created: formatDate(today)
+        };
+        
+        records.push(currentWeek);
+        saveWeeklyRecords(records);
+    } else {
+        currentWeek = records[currentWeekIndex];
+    }
+    
+    return currentWeek;
+}
+
+// ===== CURRENT 6-DAY WEEKLY POINTS MAP =====
+function getCurrentWeekPoints() {
+    const currentWeek = getCurrentWeekRecord();
+    if (!currentWeek || !currentWeek.participants) {
+        return {};
+    }
+    return Object.fromEntries(
+        Object.entries(currentWeek.participants).map(([name, participantData]) => [
+            name,
+            participantData.totalWeeklyPoints || 0
+        ])
+    );
+}
+
+// ===== UPDATE WEEKLY POINTS FOR TODAY =====
+function updateWeeklyPoints(orderedNames) {
+    try {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        
+        // If it's Sunday, skip weekly tracking (Sunday is not included)
+        if (dayOfWeek === 0) {
+            console.log('Sunday - skipping weekly tracking');
+            return;
+        }
+        
+        const days = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = days[dayOfWeek];
+        
+        // Get all records
+        const records = loadWeeklyRecords();
+        const mondayDate = getMondayOfWeek(today);
+        const mondayStr = formatDate(mondayDate);
+        
+        // Find existing week or create new one
+        let weekIndex = records.findIndex(r => r.weekStartDate === mondayStr);
+        
+        if (weekIndex === -1) {
+            // Create new week
+            const saturdayDate = new Date(mondayDate);
+            saturdayDate.setDate(saturdayDate.getDate() + 5);
+            
+            records.push({
+                weekStartDate: mondayStr,
+                weekEndDate: formatDate(saturdayDate),
+                participants: {},
+                created: formatDate(today)
+            });
+            weekIndex = records.length - 1;
+        }
+        
+        // Update participants for this week
+        const currentWeek = records[weekIndex];
+        
+        orderedNames.forEach((name, index) => {
+            const position = index + 1;
+            const points = getPoints(position);
+            
+            if (!currentWeek.participants[name]) {
+                currentWeek.participants[name] = {
+                    dailyPoints: {
+                        Monday: 0,
+                        Tuesday: 0,
+                        Wednesday: 0,
+                        Thursday: 0,
+                        Friday: 0,
+                        Saturday: 0
+                    },
+                    totalWeeklyPoints: 0
+                };
+            }
+            
+            // Add points for today
+            currentWeek.participants[name].dailyPoints[dayName] += points;
+            
+            // Recalculate total for this participant
+            currentWeek.participants[name].totalWeeklyPoints = Object.values(currentWeek.participants[name].dailyPoints).reduce((sum, dayPoints) => sum + dayPoints, 0);
+        });
+        
+        // Save updated records
+        records[weekIndex] = currentWeek;
+        saveWeeklyRecords(records);
+        
+        console.log('Weekly points updated for', orderedNames.length, 'participants on', dayName);
+    } catch (error) {
+        console.error('Error updating weekly points:', error);
+    }
+}
+
 // ===== CLEAN NAME =====
 function cleanName(name) {
     let cleaned = name.toLowerCase().trim();
@@ -112,6 +275,9 @@ function assignPositions(names) {
     });
     
     saveCounts(counts);
+    
+    // Update weekly points for each participant
+    updateWeeklyPoints(orderedNames);
     
     // Return as array (not object) to preserve order
     return orderedNames;
@@ -187,17 +353,21 @@ function viewLeaderboard() {
     output += '    (Based on Total Points)\n';
     output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
     
+    const currentWeekPoints = getCurrentWeekPoints();
+
     sorted.forEach(([name, data], index) => {
         const rank = index + 1;
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `  ${rank}.`;
+        const weeklyScore = currentWeekPoints[name] || 0;
+
         output += `${medal} ${name}\n`;
-        output += `      ⭐ ${data.points || 0} pts\n`;
+        output += `      ⭐ All-time: ${data.points || 0} pts | Weekly (6-day): ${weeklyScore} pts\n`;
         output += `      🥇 1st: ${data.first} | 🥈 2nd: ${data.second}\n\n`;
     });
     
-    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
     output += '    🏅 PRIZE WINNERS 🏅\n';
-    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    output += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
     
     if (sorted.length >= 1) {
         output += `🥇 1st Prize: ${sorted[0][0]}\n`;
@@ -211,6 +381,73 @@ function viewLeaderboard() {
     
     outputDiv.textContent = output;
     outputDiv.classList.add('show');
+}
+
+// ===== VIEW WEEKLY RECORDS =====
+function viewWeeklyRecords() {
+    try {
+        const records = loadWeeklyRecords();
+        const outputDiv = document.getElementById('output');
+        
+        console.log('Loaded records:', records);
+        
+        if (!records || records.length === 0) {
+            outputDiv.textContent = 'No weekly records available yet.\nAssign positions to start tracking weekly points.';
+            outputDiv.classList.add('show');
+            return;
+        }
+        
+        let output = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        output += '     📊 WEEKLY POINTS SUMMARY 📊\n';
+        output += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+        
+        // Display records in reverse order (newest first)
+        const sortedRecords = [...records].reverse();
+        
+        sortedRecords.forEach((week, weekIndex) => {
+            const weekNumber = sortedRecords.length - weekIndex;
+            output += `📅 WEEK ${weekNumber}: ${week.weekStartDate} to ${week.weekEndDate}\n`;
+            output += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+            
+            // Check if participants exist
+            if (!week.participants || Object.keys(week.participants).length === 0) {
+                output += 'No participants recorded for this week.\n\n';
+            } else {
+                // Sort participants by their weekly total points (descending)
+                const sortedParticipants = Object.entries(week.participants)
+                    .sort(([, a], [, b]) => (b.totalWeeklyPoints || 0) - (a.totalWeeklyPoints || 0));
+                
+                // Display each participant with their points
+                sortedParticipants.forEach(([participantName, participantData], participantIndex) => {
+                    const rank = participantIndex + 1;
+                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `  ${rank}.`;
+                    output += `${medal} ${participantName}: ⭐ ${participantData.totalWeeklyPoints || 0} pts\n`;
+                    
+                    // Show daily breakdown
+                    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    dayOrder.forEach(day => {
+                        const dayPoints = participantData.dailyPoints && participantData.dailyPoints[day] ? participantData.dailyPoints[day] : 0;
+                        if (dayPoints > 0) {
+                            output += `     ${day}: ${dayPoints} pts\n`;
+                        }
+                    });
+                    output += '\n';
+                });
+            }
+            
+            output += '\n';
+        });
+        
+        output += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        
+        outputDiv.textContent = output;
+        outputDiv.classList.add('show');
+    } catch (error) {
+        console.error('Error displaying weekly records:', error);
+        const outputDiv = document.getElementById('output');
+        outputDiv.textContent = 'Error loading weekly records. Please try again.\n\nError: ' + error.message;
+        outputDiv.classList.add('show');
+    }
 }
 
 // ===== EVENT LISTENERS =====
@@ -233,9 +470,14 @@ document.getElementById('leaderboardBtn').addEventListener('click', () => {
     viewLeaderboard();
 });
 
+document.getElementById('weeklyBtn').addEventListener('click', () => {
+    viewWeeklyRecords();
+});
+
 document.getElementById('resetBtn').addEventListener('click', () => {
     if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
         localStorage.removeItem('positionCounts');
+        localStorage.removeItem('weeklyRecords');
         document.getElementById('output').classList.remove('show');
         document.getElementById('output').textContent = '';
         alert('Data has been reset!');
