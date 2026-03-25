@@ -118,6 +118,16 @@ button:active {
     background: linear-gradient(135deg, #6ba3e0 0%, #4a90d9 100%);
 }
 
+/* Weekly Button */
+#weeklyBtn {
+    background: linear-gradient(135deg, #9b59b6 0%, #6c3483 100%);
+    color: white;
+}
+
+#weeklyBtn:hover {
+    background: linear-gradient(135deg, #bb86fc 0%, #9b59b6 100%);
+}
+
 /* Reset Button */
 .reset-btn {
     background: transparent;
